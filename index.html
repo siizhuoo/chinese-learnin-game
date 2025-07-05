@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journey to the Middle Kingdom - Chinese Learning Game</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        #root {
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        const ChineseLearningGame = () => {
+          const [gameState, setGameState] = useState({
+            currentLevel: 1,
+            wisdomPoints: 0,
+            dailyPlayTime: 0,
+            character: null,
+            inventory: [],
+            completedLevels: [],
+            currentQuestionIndex: 0,
+            streak: 0,
+            totalCorrectAnswers: 0
+          });
+          
+          const [selectedCharacter, setSelectedCharacter] = useState(null);
+          const [gameScreen, setGameScreen] = useState('character-select');
+          const [currentQuestion, setCurrentQuestion] = useState(null);
+          const [showResult, setShowResult] = useState(false);
+          const [resultMessage, setResultMessage] = useState('');
+          const [currentLevelQuestions, setCurrentLevelQuestions] = useState([]);
+
+          // Shanhaijing Characters
+          const characters = [
+            {
+              id: 'qilin',
+              name: 'Qilin (麒麟)',
+              description: 'Benevolent dragon-horse with wisdom bonus',
+              bonus: 'Respectful phrases +20%',
+              color: 'bg-gradient-to-br from-purple-400 to-pink-400',
+              icon: '🦄'
+            },
+            {
+              id: 'fengniao',
+              name: 'Fengniao (风鸟)',
+              description: 'Swift wind bird with speed bonus',
+              bonus: 'Pronunciation speed +20%',
+              color: 'bg-gradient-to-br from-blue-400 to-cyan-400',
+              icon: '🐦'
+            },
+            {
+              id: 'jiuwei',
+              name: 'Jiuwei Hu (九尾狐)',
+              description: 'Nine-tailed fox with wisdom bonus',
+              bonus: 'Character recognition +20%',
+              color: 'bg-gradient-to-br from-orange-400 to-red-400',
+              icon: '🦊'
+            },
+            {
+              id: 'longzi',
+              name: 'Longzi (龙子)',
+              description: 'Dragon child with cultural bonus',
+              bonus: 'Cultural knowledge +20%',
+              color: 'bg-gradient-to-br from-green-400 to-emerald-400',
+              icon: '🐉'
+            }
+          ];
+
+          // Complete 20-level progression
+          const levels = [
+            { id: 1, name: 'The Awakening', chineseName: '觉醒', region: 'Kunlun Mountains', category: 'Foundation' },
+            { id: 2, name: 'First Sounds', chineseName: '初音', region: 'Peach Blossom Valley', category: 'Foundation' },
+            { id: 3, name: 'Tone Harmony', chineseName: '声调和谐', region: 'Singing River', category: 'Foundation' },
+            { id: 4, name: 'Voice of the Wind', chineseName: '风之声', region: 'Bamboo Forest', category: 'Foundation' },
+            { id: 5, name: 'Ancient Symbols', chineseName: '古代符号', region: 'Stone Tablet Garden', category: 'Characters' },
+            { id: 6, name: 'Family Bonds', chineseName: '家庭纽带', region: 'Ancestor Temple', category: 'Characters' },
+            { id: 7, name: 'Wise Elders', chineseName: '智慧长者', region: 'Elder\'s Pavilion', category: 'Characters' },
+            { id: 8, name: 'Circle of Kin', chineseName: '亲属圈', region: 'Family Courtyard', category: 'Characters' },
+            { id: 9, name: 'Morning Greetings', chineseName: '晨间问候', region: 'Village Square', category: 'Daily Life' },
+            { id: 10, name: 'Feast of Flavors', chineseName: '美食盛宴', region: 'Golden Kitchen', category: 'Daily Life' },
+            { id: 11, name: 'Counting Stars', chineseName: '数星星', region: 'Night Market', category: 'Daily Life' },
+            { id: 12, name: 'Rainbow Bridge', chineseName: '彩虹桥', region: 'Colorful Gardens', category: 'Daily Life' },
+            { id: 13, name: 'Paths Unknown', chineseName: '未知之路', region: 'Crossroads Inn', category: 'Travel' },
+            { id: 14, name: 'Flying Chariots', chineseName: '飞行战车', region: 'Cloud Station', category: 'Travel' },
+            { id: 15, name: 'Resting Place', chineseName: '休息之地', region: 'Jade Hotel', category: 'Travel' },
+            { id: 16, name: 'Merchant\'s Way', chineseName: '商人之路', region: 'Silk Road', category: 'Travel' },
+            { id: 17, name: 'Stories of Old', chineseName: '古老故事', region: 'Ancient Library', category: 'Advanced' },
+            { id: 18, name: 'Cultural Bridges', chineseName: '文化桥梁', region: 'Harmony Hall', category: 'Advanced' },
+            { id: 19, name: 'Dragon\'s Wisdom', chineseName: '龙的智慧', region: 'Dragon Palace', category: 'Advanced' },
+            { id: 20, name: 'Journey\'s End', chineseName: '旅程终点', region: 'Celestial Peak', category: 'Advanced' }
+          ];
+
+          // Comprehensive question database for all levels
+          const allQuestions = {
+            1: [
+              {
+                type: 'pinyin',
+                question: 'How do you pronounce this 拼音 (pīnyīn)?',
+                character: 'mā',
+                chineseChar: '妈',
+                meaning: 'mother',
+                options: ['mah (flat)', 'mah (rising)', 'mah (falling-rising)', 'mah (falling)'],
+                correct: 0,
+                explanation: 'mā (妈) means "mother" and uses the first tone - high and flat'
+              },
+              {
+                type: 'tone',
+                question: 'Which 声调 (shēngdiào - tone) does this represent?',
+                character: 'má',
+                chineseChar: '麻',
+                meaning: 'hemp/numb',
+                options: ['第一声 (first tone)', '第二声 (second tone)', '第三声 (third tone)', '第四声 (fourth tone)'],
+                correct: 1,
+                explanation: 'má (麻) uses 第二声 (second tone) - rising like asking "what?" in English'
+              },
+              {
+                type: 'sound',
+                question: 'What sound does this 汉字 (hànzì) make?',
+                character: 'bā',
+                chineseChar: '八',
+                meaning: 'eight',
+                options: ['ba', 'pa', 'ma', 'da'],
+                correct: 0,
+                explanation: 'bā (八) means "eight" and makes the "ba" sound with first tone'
+              }
+            ],
+            2: [
+              {
+                type: 'pinyin',
+                question: 'How do you pronounce this 拼音?',
+                character: 'bà',
+                chineseChar: '爸',
+                meaning: 'father',
+                options: ['bah (flat)', 'bah (rising)', 'bah (falling-rising)', 'bah (falling)'],
+                correct: 3,
+                explanation: 'bà (爸) means "father" and uses the fourth tone - sharp and falling'
+              },
+              {
+                type: 'tone',
+                question: 'Which tone is this?',
+                character: 'mǎ',
+                chineseChar: '马',
+                meaning: 'horse',
+                options: ['第一声', '第二声', '第三声', '第四声'],
+                correct: 2,
+                explanation: 'mǎ (马) uses 第三声 (third tone) - dipping down then up'
+              }
+            ],
+            3: [
+              {
+                type: 'greeting',
+                question: 'How do you say "hello" in Chinese?',
+                character: 'nǐ hǎo',
+                chineseChar: '你好',
+                meaning: 'hello',
+                options: ['你好', '再见', '谢谢', '对不起'],
+                correct: 0,
+                explanation: 'nǐ hǎo (你好) - both words use third tone, means "hello"'
+              }
+            ],
+            4: [
+              {
+                type: 'syllable',
+                question: 'What does 小 mean?',
+                character: 'xiǎo',
+                chineseChar: '小',
+                meaning: 'small',
+                options: ['big', 'small', 'tall', 'short'],
+                correct: 1,
+                explanation: 'xiǎo (小) means "small" - very useful word!'
+              }
+            ],
+            5: [
+              {
+                type: 'character',
+                question: 'How many strokes does this character have?',
+                character: 'rén',
+                chineseChar: '人',
+                meaning: 'person',
+                options: ['1', '2', '3', '4'],
+                correct: 1,
+                explanation: '人 (rén) has 2 strokes and means "person"'
+              }
+            ],
+            6: [
+              {
+                type: 'family',
+                question: 'How do you write "big sister"?',
+                character: 'jiě jie',
+                chineseChar: '姐姐',
+                meaning: 'older sister',
+                options: ['妹妹', '姐姐', '哥哥', '弟弟'],
+                correct: 1,
+                explanation: '姐姐 (jiě jie) means older sister'
+              }
+            ],
+            7: [
+              {
+                type: 'respect',
+                question: 'How do you say "grandfather" (paternal)?',
+                character: 'yé ye',
+                chineseChar: '爷爷',
+                meaning: 'grandfather (paternal)',
+                options: ['奶奶', '爷爷', '外公', '外婆'],
+                correct: 1,
+                explanation: '爷爷 (yé ye) is paternal grandfather'
+              }
+            ],
+            8: [
+              {
+                type: 'family-tree',
+                question: 'What is 舅舅?',
+                character: 'jiù jiu',
+                chineseChar: '舅舅',
+                meaning: 'maternal uncle',
+                options: ['paternal uncle', 'maternal uncle', 'cousin', 'nephew'],
+                correct: 1,
+                explanation: '舅舅 (jiù jiu) is your mother\'s brother'
+              }
+            ],
+            9: [
+              {
+                type: 'greeting',
+                question: 'How do you say "good morning"?',
+                character: 'zǎo shàng hǎo',
+                chineseChar: '早上好',
+                meaning: 'good morning',
+                options: ['晚上好', '下午好', '早上好', '中午好'],
+                correct: 2,
+                explanation: '早上好 (zǎo shàng hǎo) means good morning'
+              }
+            ],
+            10: [
+              {
+                type: 'food',
+                question: 'What is 米饭?',
+                character: 'mǐ fàn',
+                chineseChar: '米饭',
+                meaning: 'rice',
+                options: ['noodles', 'rice', 'bread', 'dumplings'],
+                correct: 1,
+                explanation: '米饭 (mǐ fàn) means rice - a staple food'
+              }
+            ],
+            11: [
+              {
+                type: 'numbers',
+                question: 'What number is 五?',
+                character: 'wǔ',
+                chineseChar: '五',
+                meaning: 'five',
+                options: ['3', '4', '5', '6'],
+                correct: 2,
+                explanation: '五 (wǔ) means five'
+              }
+            ],
+            12: [
+              {
+                type: 'colors',
+                question: 'What color is 红色?',
+                character: 'hóng sè',
+                chineseChar: '红色',
+                meaning: 'red',
+                options: ['blue', 'red', 'green', 'yellow'],
+                correct: 1,
+                explanation: '红色 (hóng sè) means red'
+              }
+            ],
+            13: [
+              {
+                type: 'direction',
+                question: 'What does 左边 mean?',
+                character: 'zuǒ biān',
+                chineseChar: '左边',
+                meaning: 'left side',
+                options: ['right side', 'left side', 'straight ahead', 'behind'],
+                correct: 1,
+                explanation: '左边 (zuǒ biān) means left side'
+              }
+            ],
+            14: [
+              {
+                type: 'transport',
+                question: 'What is 飞机?',
+                character: 'fēi jī',
+                chineseChar: '飞机',
+                meaning: 'airplane',
+                options: ['car', 'train', 'airplane', 'bus'],
+                correct: 2,
+                explanation: '飞机 (fēi jī) means airplane'
+              }
+            ],
+            15: [
+              {
+                type: 'hotel',
+                question: 'How do you say "hotel"?',
+                character: 'jiǔ diàn',
+                chineseChar: '酒店',
+                meaning: 'hotel',
+                options: ['酒店', '餐厅', '商店', '医院'],
+                correct: 0,
+                explanation: '酒店 (jiǔ diàn) means hotel'
+              }
+            ],
+            16: [
+              {
+                type: 'shopping',
+                question: 'How much does this cost?',
+                character: 'duō shao qián',
+                chineseChar: '多少钱',
+                meaning: 'how much money',
+                options: ['多少钱', '什么颜色', '几点了', '在哪里'],
+                correct: 0,
+                explanation: '多少钱 (duō shao qián) means "how much money"'
+              }
+            ],
+            17: [
+              {
+                type: 'culture',
+                question: 'What is 春节?',
+                character: 'chūn jié',
+                chineseChar: '春节',
+                meaning: 'Spring Festival/Chinese New Year',
+                options: ['Mid-Autumn Festival', 'Spring Festival', 'Dragon Boat Festival', 'Lantern Festival'],
+                correct: 1,
+                explanation: '春节 (chūn jié) is Chinese New Year, the most important holiday'
+              }
+            ],
+            18: [
+              {
+                type: 'expression',
+                question: 'What does 加油 mean?',
+                character: 'jiā yóu',
+                chineseChar: '加油',
+                meaning: 'come on/good luck',
+                options: ['goodbye', 'come on/good luck', 'I love you', 'excuse me'],
+                correct: 1,
+                explanation: '加油 (jiā yóu) means "come on" or "good luck" - very encouraging!'
+              }
+            ],
+            19: [
+              {
+                type: 'wisdom',
+                question: 'What does 学习 mean?',
+                character: 'xué xí',
+                chineseChar: '学习',
+                meaning: 'to study/learn',
+                options: ['to teach', 'to study', 'to work', 'to play'],
+                correct: 1,
+                explanation: '学习 (xué xí) means "to study" or "to learn"'
+              }
+            ],
+            20: [
+              {
+                type: 'mastery',
+                question: 'How do you say "I can speak a little Chinese"?',
+                character: 'wǒ huì shuō yì diǎn zhōng wén',
+                chineseChar: '我会说一点中文',
+                meaning: 'I can speak a little Chinese',
+                options: ['我不会说中文', '我会说一点中文', '我很会说中文', '我想学中文'],
+                correct: 1,
+                explanation: '我会说一点中文 (wǒ huì shuō yì diǎn zhōng wén) - perfect for travel!'
+              }
+            ]
+          };
+
+          // Timer for daily play limit
+          useEffect(() => {
+            const timer = setInterval(() => {
+              setGameState(prev => ({
+                ...prev,
+                dailyPlayTime: prev.dailyPlayTime + 1
+              }));
+            }, 60000);
+
+            return () => clearInterval(timer);
+          }, []);
+
+          const selectCharacter = (character) => {
+            setSelectedCharacter(character);
+            setGameState(prev => ({
+              ...prev,
+              character: character
+            }));
+            setGameScreen('game-map');
+          };
+
+          const startLevel = (levelId) => {
+            if (allQuestions[levelId] && gameState.dailyPlayTime < 15) {
+              setCurrentLevelQuestions(allQuestions[levelId]);
+              setGameScreen('battle');
+              setGameState(prev => ({ ...prev, currentQuestionIndex: 0 }));
+              setCurrentQuestion(allQuestions[levelId][0]);
+            }
+          };
+
+          const answerQuestion = (selectedAnswer) => {
+            const isCorrect = selectedAnswer === currentQuestion.correct;
+            
+            if (isCorrect) {
+              setResultMessage('正确！(zhèngquè - Correct!) 很好！(hěn hǎo - Very good!)');
+              setGameState(prev => ({
+                ...prev,
+                wisdomPoints: prev.wisdomPoints + 10,
+                streak: prev.streak + 1,
+                totalCorrectAnswers: prev.totalCorrectAnswers + 1
+              }));
+            } else {
+              setResultMessage('不对 (bù duì - Not quite right). ' + currentQuestion.explanation);
+              setGameState(prev => ({
+                ...prev,
+                streak: 0
+              }));
+            }
+            
+            setShowResult(true);
+            setTimeout(() => {
+              setShowResult(false);
+              
+              const nextQuestionIndex = gameState.currentQuestionIndex + 1;
+              if (nextQuestionIndex < currentLevelQuestions.length) {
+                setGameState(prev => ({ 
+                  ...prev, 
+                  currentQuestionIndex: nextQuestionIndex 
+                }));
+                setCurrentQuestion(currentLevelQuestions[nextQuestionIndex]);
+              } else {
+                const currentLevelId = levels.find(level => 
+                  JSON.stringify(currentLevelQuestions) === JSON.stringify(allQuestions[level.id])
+                )?.id;
+                
+                setGameState(prev => ({
+                  ...prev,
+                  completedLevels: [...prev.completedLevels, currentLevelId],
+                  currentLevel: Math.max(prev.currentLevel, currentLevelId + 1),
+                  currentQuestionIndex: 0,
+                  wisdomPoints: prev.wisdomPoints + 50
+                }));
+                setGameScreen('level-complete');
+              }
+            }, 3000);
+          };
+
+          const formatTime = (minutes) => {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hours}h ${mins}m`;
+          };
+
+          const getCurrentLevel = () => {
+            return levels.find(level => 
+              JSON.stringify(currentLevelQuestions) === JSON.stringify(allQuestions[level.id])
+            );
+          };
+
+          if (gameScreen === 'character-select') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+                <div className="max-w-6xl mx-auto">
+                  <div className="text-center mb-8">
+                    <h1 className="text-4xl font-bold text-white mb-4">Journey to the Middle Kingdom</h1>
+                    <h2 className="text-2xl font-bold text-purple-200 mb-2">中国之旅 (Zhōngguó zhī lǚ)</h2>
+                    <p className="text-xl text-purple-200">Choose your mythical companion from the 山海经 (Shānhǎijīng)</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {characters.map((character) => (
+                      <div
+                        key={character.id}
+                        className={`${character.color} rounded-xl p-6 cursor-pointer transform transition-all hover:scale-105 hover:shadow-2xl`}
+                        onClick={() => selectCharacter(character)}
+                      >
+                        <div className="text-center">
+                          <div className="text-6xl mb-4">{character.icon}</div>
+                          <h3 className="text-2xl font-bold text-white mb-2">{character.name}</h3>
+                          <p className="text-white mb-4">{character.description}</p>
+                          <div className="bg-white/20 rounded-lg p-3">
+                            <p className="text-white font-semibold">{character.bonus}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameScreen === 'level-complete') {
+            const completedLevel = getCurrentLevel();
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-green-900 via-emerald-900 to-teal-900 p-4">
+                <div className="max-w-4xl mx-auto text-center">
+                  <div className="bg-white rounded-xl shadow-2xl p-8 mb-6">
+                    <div className="text-6xl mb-4">🎉</div>
+                    <h2 className="text-3xl font-bold mb-4 text-green-600">Level Complete!</h2>
+                    <h3 className="text-2xl font-bold mb-4 text-gray-700">
+                      关卡完成！(Guānkǎ wánchéng!)
+                    </h3>
+                    {completedLevel && (
+                      <div className="mb-6">
+                        <h4 className="text-xl font-bold mb-2">
+                          {completedLevel.name} - {completedLevel.chineseName}
+                        </h4>
+                        <p className="text-gray-600">{completedLevel.region}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-yellow-100 p-4 rounded-lg">
+                        <div className="text-2xl mb-2">⭐</div>
+                        <div className="font-bold">+50 智慧点</div>
+                        <div className="text-sm text-gray-600">Wisdom Points</div>
+                      </div>
+                      <div className="bg-blue-100 p-4 rounded-lg">
+                        <div className="text-2xl mb-2">🔥</div>
+                        <div className="font-bold">{gameState.streak} 连胜</div>
+                        <div className="text-sm text-gray-600">Streak</div>
+                      </div>
+                      <div className="bg-purple-100 p-4 rounded-lg">
+                        <div className="text-2xl mb-2">🎯</div>
+                        <div className="font-bold">{gameState.totalCorrectAnswers} 正确</div>
+                        <div className="text-sm text-gray-600">Total Correct</div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setGameScreen('game-map')}
+                      className="bg-gradient-to-br from-green-500 to-emerald-600 text-white px-8 py-3 rounded-lg font-bold text-lg hover:shadow-lg transform transition-all hover:scale-105"
+                    >
+                      Continue Journey 继续旅程
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameScreen === 'game-map') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-amber-100 via-orange-100 to-red-100 p-4">
+                <div className="max-w-6xl mx-auto">
+                  <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-4xl">{selectedCharacter?.icon}</div>
+                        <div>
+                          <h2 className="text-2xl font-bold text-gray-800">{selectedCharacter?.name}</h2>
+                          <p className="text-gray-600">{selectedCharacter?.bonus}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <span>⭐</span>
+                          <span className="font-bold text-lg">{gameState.wisdomPoints}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span>⏰</span>
+                          <span className="font-bold text-lg">{formatTime(gameState.dailyPlayTime)}/15m</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span>🏆</span>
+                          <span className="font-bold text-lg">Level {gameState.currentLevel}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="text-2xl font-bold mb-6 text-center">Your Journey Through Ancient China</h3>
+                    <h4 className="text-lg font-semibold mb-4 text-center text-gray-600">你的中国古代之旅 (Nǐ de Zhōngguó gǔdài zhī lǚ)</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {levels.map((level) => {
+                        const isUnlocked = level.id <= gameState.currentLevel;
+                        const isCompleted = gameState.completedLevels.includes(level.id);
+                        
+                        return (
+                          <div
+                            key={level.id}
+                            className={`
+                              p-4 rounded-lg border-2 cursor-pointer transition-all
+                              ${isUnlocked 
+                                ? 'bg-gradient-to-br from-green-100 to-emerald-100 border-green-300 hover:shadow-lg' 
+                                : 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-50'
+                              }
+                              ${isCompleted ? 'border-yellow-400 bg-gradient-to-br from-yellow-100 to-amber-100' : ''}
+                            `}
+                            onClick={() => isUnlocked && gameState.dailyPlayTime < 15 && startLevel(level.id)}
+                          >
+                            <div className="text-center">
+                              <div className="text-lg font-bold mb-2">
+                                {level.id}. {level.name}
+                              </div>
+                              <div className="text-sm font-semibold text-gray-700 mb-1">
+                                {level.chineseName}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">{level.region}</div>
+                              <div className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                {level.category}
+                              </div>
+                              {isCompleted && (
+                                <div className="mt-2">
+                                  <span className="text-yellow-500 text-xl">🏆</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {gameState.dailyPlayTime >= 15 && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-6 rounded">
+                      <p className="font-bold">Daily adventure complete! 今天完成了！(Jīntiān wánchéng le!)</p>
+                      <p>You've played for 15 minutes today - perfect for a learning snack! Return tomorrow to continue your journey!</p>
+                      <p className="text-sm mt-2">明天见！(Míngtiān jiàn! - See you tomorrow!)</p>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+                    <h3 className="text-xl font-bold mb-4 text-center">Your Progress 你的进度</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{gameState.completedLevels.length}</div>
+                        <div className="text-sm text-gray-600">Levels Completed</div>
+                        <div className="text-xs text-gray-500">关卡完成</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">{gameState.totalCorrectAnswers}</div>
+                        <div className="text-sm text-gray-600">Correct Answers</div>
+                        <div className="text-xs text-gray-500">正确答案</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{gameState.streak}</div>
+                        <div className="text-sm text-gray-600">Current Streak</div>
+                        <div className="text-xs text-gray-500">连胜记录</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameScreen === 'battle' && currentQuestion) {
+            const currentLevel = getCurrentLevel();
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-red-900 via-orange-900 to-yellow-900 p-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                      Level {currentLevel?.id}: {currentLevel?.name}
+                    </h2>
+                    <h3 className="text-xl font-bold text-orange-200 mb-4">
+                      第{currentLevel?.id}关：{currentLevel?.chineseName}
+                    </h3>
+                    <p className="text-xl text-orange-200">Learn Chinese step by step! 一步一步学中文！</p>
+                  </div>
+
+                  {!showResult ? (
+                    <div className="bg-white rounded-xl shadow-2xl p-8">
+                      <div className="text-center mb-8">
+                        <div className="text-6xl mb-4 font-bold text-red-600">
+                          {currentQuestion.chineseChar} ({currentQuestion.character})
+                        </div>
+                        <div className="text-lg text-gray-600 mb-2">
+                          Meaning: {currentQuestion.meaning}
+                        </div>
+                        <h3 className="text-2xl font-bold mb-4">{currentQuestion.question}</h3>
+                        <div className="text-sm text-gray-500">
+                          Question {gameState.currentQuestionIndex + 1} of {currentLevelQuestions.length}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {currentQuestion.options.map((option, index) => (
+                          <button
+                            key={index}
+                            onClick={() => answerQuestion(index)}
+                            className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transform transition-all hover:scale-105 text-lg font-semibold"
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow-2xl p-8 text-center">
+                      <div className="text-4xl mb-4">
+                        {resultMessage.includes('正确') ? '🎉' : '📚'}
+                      </div>
+                      <h3 className="text-2xl font-bold mb-4">{resultMessage}</h3>
+                      <div className="text-lg text-gray-600">
+                        {currentQuestion.explanation}
+                      </div>
+                      {gameState.streak > 1 && (
+                        <div className="mt-4 bg-yellow-100 p-3 rounded-lg">
+                          <p className="text-yellow-800 font-bold">
+                            🔥 {gameState.streak} 连胜! (Streak!)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        };
+
+        ReactDOM.render(<ChineseLearningGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>
