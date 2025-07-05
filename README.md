@@ -20,31 +20,6 @@ A fun and educational Chinese learning adventure game designed for kids aged 5-1
 4. **Travel (Levels 13-16)** - Directions, transportation, hotels
 5. **Advanced (Levels 17-20)** - Culture, expressions, mastery
 
-## 🚀 How to Play Online
-
-Visit: **[Your GitHub Pages URL will be here]**
-
-## 🛠️ Setup Instructions
-
-### For GitHub Pages (Recommended):
-
-1. **Create GitHub Account** at [github.com](https://github.com)
-2. **Create New Repository** named `chinese-learning-game`
-3. **Upload the `index.html` file** to your repository
-4. **Enable GitHub Pages**:
-   - Go to repository Settings
-   - Scroll to "Pages" section
-   - Set source to "Deploy from a branch"
-   - Choose "main" branch and "/ (root)" folder
-   - Click Save
-5. **Access your game** at: `https://[username].github.io/chinese-learning-game`
-
-### For Local Testing:
-
-1. Download the `index.html` file
-2. Double-click to open in any web browser
-3. Works offline - no internet required after download
-
 ## 📱 Device Compatibility
 
 - ✅ **Tablets** (iPad, Android tablets)
